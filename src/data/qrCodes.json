@@ -1,0 +1,28 @@
+{
+  "FANTA001": {
+    "type": "win",
+    "prizeId": "PRIZE001",
+    "claimed": false
+  },
+  "FANTA002": {
+    "type": "fail",
+    "prizeId": null,
+    "claimed": false
+  },
+  "FANTA003": {
+    "type": "clue",
+    "prizeId": null,
+    "claimed": false,
+    "clue": "Look closer. The next clue is closer than you think..."
+  },
+  "FANTA004": {
+    "type": "win",
+    "prizeId": "PRIZE002",
+    "claimed": false
+  },
+  "FANTA005": {
+    "type": "fail",
+    "prizeId": null,
+    "claimed": false
+  }
+}

@@ -1,0 +1,183 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  position: relative;
+  width: min(100%, 28rem);
+  overflow: hidden;
+  border-radius: 15px;
+  background: #fff;
+  padding: 1.75rem 1.75rem 1.5rem;
+  text-align: center;
+  color: #000;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: none;
+  background: transparent;
+  border-radius: 9999px;
+  color: #000;
+  font-size: 2rem;
+  line-height: 1;
+  transition: background-color 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.modal-icon {
+  margin-bottom: 1rem;
+  font-size: 3rem;
+}
+
+.modal-eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  font-family: 'Fanta', Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.modal-title {
+  margin: 0.5rem 0 0;
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-family: 'Fanta', Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.modal-body {
+  margin: 1.25rem auto 0;
+  max-width: 17rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: rgba(0, 0, 0, 0.7);
+  font-weight: 400;
+}
+
+.modal-body--standalone {
+  max-width: 20rem;
+}
+
+.modal-prize {
+  margin-top: 1.5rem;
+  border-radius: 15px;
+  background: #ff6a00;
+  padding: 1.25rem 1.25rem 1.1rem;
+  color: #fff;
+}
+
+.modal-prize__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+}
+
+.modal-prize__name {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+  font-family: 'Fanta', Arial, sans-serif;
+}
+
+.modal-clue {
+  margin-top: 1.5rem;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.claim-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.claim-form__field {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.claim-form__field input {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  background: #f5f5f5;
+  padding: 0.8rem 0.9rem;
+  color: #000;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.claim-form__field input:focus {
+  outline: none;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.form-error {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #c30000;
+}
+
+.modal-continue {
+  width: 100%;
+  margin-top: 1.75rem;
+  border: none;
+  border-radius: 15px;
+  background: #000;
+  padding: 1rem 1.5rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  font-family: 'Fanta', Arial, sans-serif;
+  transition: opacity 0.2s ease;
+}
+
+.modal-continue:hover {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.modal-continue:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}

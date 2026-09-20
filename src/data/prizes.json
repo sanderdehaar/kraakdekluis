@@ -1,0 +1,14 @@
+{
+  "PRIZE001": {
+    "name": "Fanta x STUKTV Prize",
+    "description": "You won a Fanta x STUKTV surprise!"
+  },
+  "PRIZE002": {
+    "name": "Fanta Surprise",
+    "description": "A refreshing Fanta surprise is waiting for you!"
+  },
+  "PRIZE003": {
+    "name": "STUKTV Merchandise",
+    "description": "You won exclusive STUKTV merchandise!"
+  }
+}
