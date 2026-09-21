@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react'
 import emailjs from '@emailjs/browser'
 import jsQR from 'jsqr'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
-import { QrCode } from 'lucide-react'
+import { QrCode, X, Upload } from 'lucide-react'
 
 import '../../styles/page.css'
 
@@ -41,15 +41,45 @@ function PrizeVaultPage() {
   const [code, setCode] = useState<string | null>(null)
   const [qrData, setQrData] = useState<QRCodeData | null>(null)
   const [prize, setPrize] = useState<PrizeData | null>(null)
-  const [qrCollection, setQrCollection] = useState<'qrCodes' | 'canQrCodes'>('canQrCodes')
+  const [qrCollection, setQrCollection] =
+    useState<'qrCodes' | 'canQrCodes'>('canQrCodes')
   const [loading, setLoading] = useState(false)
   const [claimed, setClaimed] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [, setError] = useState(false)
   const [tvAnimation, setTvAnimation] =
     useState<TVAnimation>('idle')
+  const [scanning, setScanning] = useState(false)
+  const [cameraError, setCameraError] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   const qrInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const scanFrameRef = useRef<number | null>(null)
+  const processingRef = useRef(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      '(max-width: 768px)',
+    )
+
+    const updateDevice = () => {
+      setIsMobile(mediaQuery.matches)
+    }
+
+    updateDevice()
+    mediaQuery.addEventListener('change', updateDevice)
+
+    return () => {
+      mediaQuery.removeEventListener(
+        'change',
+        updateDevice,
+      )
+      stopScanner()
+    }
+  }, [])
 
   async function loadPrize(prizeId: string | null) {
     if (!prizeId) {
@@ -57,9 +87,12 @@ function PrizeVaultPage() {
       return null
     }
 
-    const prizeSnapshot = await getDoc(doc(db, 'prizes', prizeId))
+    const prizeSnapshot = await getDoc(
+      doc(db, 'prizes', prizeId),
+    )
+
     const prizeData = prizeSnapshot.exists()
-      ? prizeSnapshot.data() as PrizeData
+      ? (prizeSnapshot.data() as PrizeData)
       : null
 
     setPrize(prizeData)
@@ -70,7 +103,9 @@ function PrizeVaultPage() {
     const collections = ['qrCodes', 'canQrCodes'] as const
 
     for (const collectionName of collections) {
-      const snapshot = await getDoc(doc(db, collectionName, codeValue))
+      const snapshot = await getDoc(
+        doc(db, collectionName, codeValue),
+      )
 
       if (snapshot.exists()) {
         return {
@@ -85,16 +120,17 @@ function PrizeVaultPage() {
 
   useEffect(() => {
     async function loadQRCode() {
-      const params = new URLSearchParams(window.location.search)
+      const params = new URLSearchParams(
+        window.location.search,
+      )
+
       const urlCode =
         params.get('code')?.trim() || null
 
       setCode(urlCode)
       setLoading(false)
 
-      if (!urlCode) {
-        return
-      }
+      if (!urlCode) return
 
       await processQRCode(urlCode)
     }
@@ -105,7 +141,9 @@ function PrizeVaultPage() {
   function extractCodeFromQR(value: string) {
     try {
       const url = new URL(value)
-      const queryCode = url.searchParams.get('code')
+
+      const queryCode =
+        url.searchParams.get('code')
 
       if (queryCode) {
         return queryCode.trim()
@@ -119,7 +157,7 @@ function PrizeVaultPage() {
         return parts[parts.length - 1].trim()
       }
     } catch {
-      // Raw QR code
+      return value.trim()
     }
 
     return value.trim()
@@ -139,7 +177,8 @@ function PrizeVaultPage() {
       setError(false)
       setTvAnimation('scanning')
 
-      const result = await findQRCode(extractedCode)
+      const result =
+        await findQRCode(extractedCode)
 
       if (!result) {
         setError(true)
@@ -158,6 +197,7 @@ function PrizeVaultPage() {
       setQrData(data)
       setClaimed(data.claimed)
       setQrCollection(result.collectionName)
+
       await loadPrize(data.prizeId)
 
       setTimeout(() => {
@@ -192,7 +232,9 @@ function PrizeVaultPage() {
     image.onload = async () => {
       try {
         const canvas = document.createElement('canvas')
-        const context = canvas.getContext('2d')
+        const context = canvas.getContext('2d', {
+          willReadFrequently: true,
+        })
 
         if (!context) {
           throw new Error(
@@ -222,11 +264,14 @@ function PrizeVaultPage() {
           imageData.data,
           imageData.width,
           imageData.height,
+          {
+            inversionAttempts: 'attemptBoth',
+          },
         )
 
         URL.revokeObjectURL(objectUrl)
 
-        if (!result) {
+        if (!result?.data) {
           setError(true)
           setTvAnimation('fail')
 
@@ -266,6 +311,11 @@ function PrizeVaultPage() {
   }
 
   function handleScan() {
+    if (isMobile) {
+      startScanner()
+      return
+    }
+
     qrInputRef.current?.click()
   }
 
@@ -279,6 +329,164 @@ function PrizeVaultPage() {
     }
 
     event.target.value = ''
+  }
+
+  async function startScanner() {
+    if (
+      scanning ||
+      !navigator.mediaDevices?.getUserMedia
+    ) {
+      return
+    }
+
+    try {
+      setCameraError(false)
+      processingRef.current = false
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: {
+              ideal: 'environment',
+            },
+            width: {
+              ideal: 1280,
+            },
+            height: {
+              ideal: 720,
+            },
+          },
+          audio: false,
+        })
+
+      streamRef.current = stream
+      setScanning(true)
+
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+
+      const video = videoRef.current
+
+      if (!video) {
+        stopScanner()
+        return
+      }
+
+      video.srcObject = stream
+
+      await video.play()
+
+      scanFrame()
+    } catch (error) {
+      console.error(
+        'Unable to access camera:',
+        error,
+      )
+
+      setCameraError(true)
+      setScanning(false)
+    }
+  }
+
+  function stopScanner() {
+    if (scanFrameRef.current !== null) {
+      cancelAnimationFrame(
+        scanFrameRef.current,
+      )
+
+      scanFrameRef.current = null
+    }
+
+    streamRef.current
+      ?.getTracks()
+      .forEach((track) => track.stop())
+
+    streamRef.current = null
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+
+    processingRef.current = false
+    setScanning(false)
+  }
+
+  function scanFrame() {
+    if (processingRef.current) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+
+    if (!video || !canvas) {
+      scanFrameRef.current =
+        requestAnimationFrame(scanFrame)
+
+      return
+    }
+
+    if (video.readyState < 2) {
+      scanFrameRef.current =
+        requestAnimationFrame(scanFrame)
+
+      return
+    }
+
+    const width = video.videoWidth
+    const height = video.videoHeight
+
+    if (!width || !height) {
+      scanFrameRef.current =
+        requestAnimationFrame(scanFrame)
+
+      return
+    }
+
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d', {
+      willReadFrequently: true,
+    })
+
+    if (!context) {
+      stopScanner()
+      return
+    }
+
+    context.drawImage(
+      video,
+      0,
+      0,
+      width,
+      height,
+    )
+
+    const imageData = context.getImageData(
+      0,
+      0,
+      width,
+      height,
+    )
+
+    const result = jsQR(
+      imageData.data,
+      imageData.width,
+      imageData.height,
+      {
+        inversionAttempts: 'attemptBoth',
+      },
+    )
+
+    if (result?.data) {
+      processingRef.current = true
+      stopScanner()
+      processQRCode(result.data)
+      return
+    }
+
+    scanFrameRef.current =
+      requestAnimationFrame(scanFrame)
   }
 
   async function handlePasswordSubmit(
@@ -304,7 +512,9 @@ function PrizeVaultPage() {
     }
 
     try {
-      const latestSnapshot = await getDoc(doc(db, qrCollection, code))
+      const latestSnapshot = await getDoc(
+        doc(db, qrCollection, code),
+      )
 
       if (!latestSnapshot.exists()) {
         setError(true)
@@ -317,18 +527,23 @@ function PrizeVaultPage() {
       if (latestData.claimed) {
         setClaimed(true)
         setQrData(latestData)
+
         await loadPrize(latestData.prizeId)
+
         setTvAnimation(latestData.type)
 
         setTimeout(() => {
           setShowModal(true)
         }, 1200)
+
         return
       }
 
       setClaimed(false)
       setQrData(latestData)
+
       await loadPrize(latestData.prizeId)
+
       setTvAnimation(latestData.type)
 
       setTimeout(() => {
@@ -348,14 +563,24 @@ function PrizeVaultPage() {
     name: string
     email: string
   }) {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    const serviceId =
+      import.meta.env.VITE_EMAILJS_SERVICE_ID
 
-    if (!serviceId || !templateId || !publicKey) {
+    const templateId =
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+
+    const publicKey =
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+
+    if (
+      !serviceId ||
+      !templateId ||
+      !publicKey
+    ) {
       console.error(
         'EmailJS is not configured. Add VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID, and VITE_EMAILJS_PUBLIC_KEY to your .env file.',
       )
+
       throw new Error(
         'The prize claim email service is not configured yet.',
       )
@@ -378,17 +603,26 @@ function PrizeVaultPage() {
     )
 
     if (!code) {
-      throw new Error('No QR code is active for this prize claim.')
+      throw new Error(
+        'No QR code is active for this prize claim.',
+      )
     }
 
-    await updateDoc(doc(db, qrCollection, code), {
-      claimed: true,
-    })
+    await updateDoc(
+      doc(db, qrCollection, code),
+      {
+        claimed: true,
+      },
+    )
 
     setClaimed(true)
+
     setQrData((currentData) =>
       currentData
-        ? { ...currentData, claimed: true }
+        ? {
+            ...currentData,
+            claimed: true,
+          }
         : currentData,
     )
 
@@ -397,7 +631,12 @@ function PrizeVaultPage() {
 
   function closeModal() {
     setShowModal(false)
-    setTvAnimation(qrData?.type === 'fail' ? 'fail' : 'idle')
+
+    setTvAnimation(
+      qrData?.type === 'fail'
+        ? 'fail'
+        : 'idle',
+    )
   }
 
   if (loading) {
@@ -425,14 +664,15 @@ function PrizeVaultPage() {
       <VaultDisplay
         mode="crack"
         animation={tvAnimation}
-        onPasswordSubmit={handlePasswordSubmit}
+        onPasswordSubmit={
+          handlePasswordSubmit
+        }
       />
 
       <input
         ref={qrInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleQRFile}
         style={{
           display: 'none',
@@ -453,21 +693,32 @@ function PrizeVaultPage() {
           }}
         >
           <ActionButton onClick={handleScan}>
-            <QrCode
-              size={22}
-              strokeWidth={2}
-            />
+            {isMobile ? (
+              <QrCode
+                size={22}
+                strokeWidth={2}
+              />
+            ) : (
+              <Upload
+                size={22}
+                strokeWidth={2}
+              />
+            )}
 
             <span>
-              SCAN QR
+              {isMobile
+                ? 'SCAN QR'
+                : 'UPLOAD QR'}
             </span>
           </ActionButton>
 
           <div
             className="mt-5 flex items-center justify-center whitespace-nowrap"
             style={{
-              fontFamily: 'Fanta, sans-serif',
-              fontSize: 'clamp(12px, 1.25vw, 15px)',
+              fontFamily:
+                'Fanta, sans-serif',
+              fontSize:
+                'clamp(12px, 1.25vw, 15px)',
               lineHeight: 1,
               fontWeight: 400,
               maxWidth: '90vw',
@@ -492,6 +743,86 @@ function PrizeVaultPage() {
         </div>
       </div>
 
+      {cameraError && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 px-6">
+          <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center">
+            <h2 className="text-2xl font-black">
+              CAMERA ACCESS NEEDED
+            </h2>
+
+            <p className="mt-4 text-sm">
+              Please allow camera access in
+              your browser and try again.
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCameraError(false)
+              }
+              className="mt-6 rounded-full bg-black px-8 py-4 font-black text-white"
+            >
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
+
+      {scanning && (
+        <div className="fixed inset-0 z-[200] overflow-hidden bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="h-full w-full object-cover"
+          />
+
+          <canvas
+            ref={canvasRef}
+            className="hidden"
+          />
+
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="relative h-64 w-64 rounded-[32px] border-4 border-white">
+              <span className="absolute -left-1 -top-1 h-12 w-12 rounded-tl-[28px] border-l-4 border-t-4 border-[#ff6a00]" />
+
+              <span className="absolute -right-1 -top-1 h-12 w-12 rounded-tr-[28px] border-r-4 border-t-4 border-[#ff6a00]" />
+
+              <span className="absolute -bottom-1 -left-1 h-12 w-12 rounded-bl-[28px] border-b-4 border-l-4 border-[#ff6a00]" />
+
+              <span className="absolute -bottom-1 -right-1 h-12 w-12 rounded-br-[28px] border-b-4 border-r-4 border-[#ff6a00]" />
+
+              <div className="absolute left-0 right-0 top-1/2 h-0.5 animate-pulse bg-[#ff6a00]" />
+            </div>
+          </div>
+
+          <div className="absolute left-0 right-0 top-8 px-6 text-center text-white">
+            <p className="text-sm font-black tracking-[3px]">
+              FANTA × STUKTV
+            </p>
+
+            <h2 className="mt-3 text-2xl font-black">
+              SCAN THE QR CODE
+            </h2>
+
+            <p className="mt-2 text-sm">
+              Point your camera at the QR
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={stopScanner}
+            className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-7 py-4 font-black text-black"
+          >
+            <X size={20} />
+
+            CLOSE
+          </button>
+        </div>
+      )}
+
       {showModal && qrData && (
         <PrizeModal
           result={{
@@ -501,10 +832,11 @@ function PrizeVaultPage() {
           }}
           isClaimed={claimed}
           onClose={closeModal}
-          onSubmitContact={handleClaimContact}
+          onSubmitContact={
+            handleClaimContact
+          }
         />
       )}
-
     </main>
   )
 }
