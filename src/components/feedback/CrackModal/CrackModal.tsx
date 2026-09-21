@@ -26,8 +26,16 @@ function CrackModal({
 }: CrackModalProps) {
   const isWin = result.status === 'win'
   const isClue = result.status === 'clue'
-  const [step, setStep] = useState<'result' | 'contact' | 'success'>('result')
-  const [form, setForm] = useState({ name: '', email: '' })
+
+  const [step, setStep] = useState<
+    'result' | 'contact' | 'success'
+  >('result')
+
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+  })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -74,6 +82,7 @@ function CrackModal({
       setStep('success')
     } catch (error) {
       console.error('Failed to submit prize claim form:', error)
+
       setSubmitError(
         'We could not send the message right now. Please try again.',
       )
@@ -195,9 +204,7 @@ function CrackModal({
             LOOKING
           </h2>
 
-          <div className="modal-clue">
-            {result.clue}
-          </div>
+          <div className="modal-clue">{result.clue}</div>
         </>
       )}
 
@@ -219,19 +226,7 @@ function CrackModal({
             className="modal-continue"
             disabled={isSubmitting}
           >
-            {isSubmitting
-              ? 'SENDING...'
-              : buttonLabel}
-          </button>
-        )}
-
-        {isWin && step === 'success' && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="modal-close"
-          >
-            CLOSE
+            {isSubmitting ? 'SENDING...' : buttonLabel}
           </button>
         )}
       </div>

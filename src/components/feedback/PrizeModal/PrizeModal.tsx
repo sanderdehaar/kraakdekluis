@@ -26,13 +26,16 @@ function PrizeModal({
 }: PrizeModalProps) {
   const isWin = result.status === 'win'
   const isClue = result.status === 'clue'
+
   const [step, setStep] = useState<
     'result' | 'contact' | 'success'
   >('result')
+
   const [form, setForm] = useState({
     name: '',
     email: '',
   })
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -40,7 +43,7 @@ function PrizeModal({
 
   const buttonLabel = useMemo(() => {
     if (isClaimed) return 'PRIZE ALREADY CLAIMED'
-    if (step === 'contact') return 'SEND MY DETAILS'
+    if (step === 'contact') return 'SEND DETAILS'
     return 'CONTINUE'
   }, [isClaimed, step])
 
@@ -78,10 +81,7 @@ function PrizeModal({
 
       setStep('success')
     } catch (error) {
-      console.error(
-        'Failed to submit prize claim form:',
-        error,
-      )
+      console.error('Failed to submit prize claim form:', error)
 
       setSubmitError(
         'We could not send the message right now. Please try again.',
@@ -101,21 +101,28 @@ function PrizeModal({
 
       {isWin && step === 'result' && (
         <>
+          <p className="modal-eyebrow">YOU WON</p>
           <h2 className="modal-title">PRIZE FOUND</h2>
 
           <div className="modal-prize">
+            <span className="modal-prize__label">YOUR PRIZE</span>
             <strong className="modal-prize__name">
               {result.prize}
             </strong>
           </div>
+
+          {isClaimed && (
+            <p className="modal-body modal-body--standalone">
+              This prize has already been claimed.
+            </p>
+          )}
         </>
       )}
 
       {isWin && step === 'contact' && (
         <>
-          <h2 className="modal-title">
-            WE'LL REACH OUT
-          </h2>
+          <p className="modal-eyebrow">CONTACT DETAILS</p>
+          <h2 className="modal-title">WE'LL REACH OUT</h2>
 
           <div className="claim-form">
             <label className="claim-form__field">
@@ -152,9 +159,7 @@ function PrizeModal({
           </div>
 
           {submitError && (
-            <p className="form-error">
-              {submitError}
-            </p>
+            <p className="form-error">{submitError}</p>
           )}
         </>
       )}
@@ -162,15 +167,11 @@ function PrizeModal({
       {isWin && step === 'success' && (
         <>
           <p className="modal-eyebrow">THANK YOU</p>
-
-          <h2 className="modal-title">
-            WE'LL CONTACT YOU
-          </h2>
+          <h2 className="modal-title">WE'LL CONTACT YOU</h2>
 
           <p className="modal-body modal-body--standalone">
-            Your prize claim has been received. We
-            will contact you shortly with the next
-            steps.
+            Your prize claim has been received. We will contact
+            you shortly with the next steps.
           </p>
         </>
       )}
@@ -188,17 +189,14 @@ function PrizeModal({
           </h2>
 
           <p className="modal-body">
-            Unfortunately, this code didn't unlock
-            the prize.
+            Unfortunately, this code didn't unlock the prize.
           </p>
         </>
       )}
 
       {isClue && (
         <>
-          <p className="modal-eyebrow">
-            YOU FOUND A CLUE
-          </p>
+          <p className="modal-eyebrow">YOU FOUND A CLUE</p>
 
           <h2 className="modal-title">
             KEEP
@@ -206,9 +204,7 @@ function PrizeModal({
             LOOKING
           </h2>
 
-          <div className="modal-clue">
-            {result.clue}
-          </div>
+          <div className="modal-clue">{result.clue}</div>
         </>
       )}
 
@@ -230,19 +226,7 @@ function PrizeModal({
             className="modal-continue"
             disabled={isSubmitting}
           >
-            {isSubmitting
-              ? 'SENDING...'
-              : buttonLabel}
-          </button>
-        )}
-
-        {isWin && step === 'success' && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="modal-close"
-          >
-            CLOSE
+            {isSubmitting ? 'SENDING...' : buttonLabel}
           </button>
         )}
       </div>
