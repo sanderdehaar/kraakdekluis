@@ -6,7 +6,7 @@ const path = require('path')
  * CHANGE THIS TO YOUR REAL WEBSITE
  */
 
-const BASE_URL = 'https://YOUR-DOMAIN.nl/crack'
+const BASE_URL = 'https://kraakdekluis-na8i.vercel.app/crack'
 
 /*
  * ALL REAL QR CODES
