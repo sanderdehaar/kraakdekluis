@@ -26,22 +26,21 @@ function PrizeModal({
 }: PrizeModalProps) {
   const isWin = result.status === 'win'
   const isClue = result.status === 'clue'
-  const [step, setStep] = useState<'result' | 'contact' | 'success'>('result')
-  const [form, setForm] = useState({ name: '', email: '' })
+  const [step, setStep] = useState<
+    'result' | 'contact' | 'success'
+  >('result')
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   const canContinueToContact = isWin && !isClaimed
 
   const buttonLabel = useMemo(() => {
-    if (isClaimed) {
-      return 'PRIZE ALREADY CLAIMED'
-    }
-
-    if (step === 'contact') {
-      return 'SEND MY DETAILS'
-    }
-
+    if (isClaimed) return 'PRIZE ALREADY CLAIMED'
+    if (step === 'contact') return 'SEND MY DETAILS'
     return 'CONTINUE'
   }, [isClaimed, step])
 
@@ -71,14 +70,22 @@ function PrizeModal({
       })
 
       if (success === false) {
-        setSubmitError('We could not send the message right now. Please try again.')
+        setSubmitError(
+          'We could not send the message right now. Please try again.',
+        )
         return
       }
 
       setStep('success')
     } catch (error) {
-      console.error('Failed to submit prize claim form:', error)
-      setSubmitError('We could not send the message right now. Please try again.')
+      console.error(
+        'Failed to submit prize claim form:',
+        error,
+      )
+
+      setSubmitError(
+        'We could not send the message right now. Please try again.',
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -86,90 +93,133 @@ function PrizeModal({
 
   return (
     <BaseModal onClose={onClose}>
-        <div className="modal-icon">
-          {isWin && '🔓'}
-          {result.status === 'fail' && '🔒'}
-          {isClue && '🔎'}
-        </div>
+      <div className="modal-icon">
+        {isWin && '🔓'}
+        {result.status === 'fail' && '🔒'}
+        {isClue && '🔎'}
+      </div>
 
-        {isWin && step === 'result' && (
-          <>
-            <h2 className="modal-title">PRIZE FOUND</h2>
-            <div className="modal-prize">
-              <strong className="modal-prize__name">{result.prize}</strong>
-            </div>
-          </>
-        )}
+      {isWin && step === 'result' && (
+        <>
+          <h2 className="modal-title">PRIZE FOUND</h2>
 
-        {isWin && step === 'contact' && (
-          <>
-            <h2 className="modal-title">WE'LL REACH OUT</h2>
+          <div className="modal-prize">
+            <strong className="modal-prize__name">
+              {result.prize}
+            </strong>
+          </div>
+        </>
+      )}
 
-            <div className="claim-form">
-              <label className="claim-form__field">
-                <span>Name</span>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Your name"
-                />
-              </label>
+      {isWin && step === 'contact' && (
+        <>
+          <h2 className="modal-title">
+            WE'LL REACH OUT
+          </h2>
 
-              <label className="claim-form__field">
-                <span>Email</span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                  placeholder="Your email"
-                />
-              </label>
-            </div>
+          <div className="claim-form">
+            <label className="claim-form__field">
+              <span>Name</span>
 
-            {submitError && <p className="form-error">{submitError}</p>}
-          </>
-        )}
+              <input
+                type="text"
+                value={form.name}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                placeholder="Your name"
+              />
+            </label>
 
-        {isWin && step === 'success' && (
-          <>
-            <p className="modal-eyebrow">THANK YOU</p>
-            <h2 className="modal-title">WE'LL CONTACT YOU</h2>
-            <p className="modal-body modal-body--standalone">
-              Your prize claim has been received. We will contact you shortly with the next steps.
+            <label className="claim-form__field">
+              <span>Email</span>
+
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
+                placeholder="Your email"
+              />
+            </label>
+          </div>
+
+          {submitError && (
+            <p className="form-error">
+              {submitError}
             </p>
-          </>
-        )}
+          )}
+        </>
+      )}
 
-        {result.status === 'fail' && (
-          <>
-            <p className="modal-eyebrow">THE SAFE STAYS LOCKED</p>
-            <h2 className="modal-title">
-              NOT THIS
-              <br />
-              TIME
-            </h2>
-            <p className="modal-body">
-              Unfortunately, this code didn't unlock the prize.
-            </p>
-          </>
-        )}
+      {isWin && step === 'success' && (
+        <>
+          <p className="modal-eyebrow">THANK YOU</p>
 
-        {isClue && (
-          <>
-            <p className="modal-eyebrow">YOU FOUND A CLUE</p>
-            <h2 className="modal-title">
-              KEEP
-              <br />
-              LOOKING
-            </h2>
-            <div className="modal-clue">{result.clue}</div>
-          </>
-        )}
+          <h2 className="modal-title">
+            WE'LL CONTACT YOU
+          </h2>
 
+          <p className="modal-body modal-body--standalone">
+            Your prize claim has been received. We
+            will contact you shortly with the next
+            steps.
+          </p>
+        </>
+      )}
+
+      {result.status === 'fail' && (
+        <>
+          <p className="modal-eyebrow">
+            THE SAFE STAYS LOCKED
+          </p>
+
+          <h2 className="modal-title">
+            NOT THIS
+            <br />
+            TIME
+          </h2>
+
+          <p className="modal-body">
+            Unfortunately, this code didn't unlock
+            the prize.
+          </p>
+        </>
+      )}
+
+      {isClue && (
+        <>
+          <p className="modal-eyebrow">
+            YOU FOUND A CLUE
+          </p>
+
+          <h2 className="modal-title">
+            KEEP
+            <br />
+            LOOKING
+          </h2>
+
+          <div className="modal-clue">
+            {result.clue}
+          </div>
+        </>
+      )}
+
+      <div className="modal-actions">
         {!isWin && !isClue && !isClaimed && (
-          <button type="button" onClick={onClose} className="modal-continue">
-            CONTINUE
+          <button
+            type="button"
+            onClick={onClose}
+            className="modal-close"
+          >
+            CLOSE
           </button>
         )}
 
@@ -180,15 +230,22 @@ function PrizeModal({
             className="modal-continue"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'SENDING...' : buttonLabel}
+            {isSubmitting
+              ? 'SENDING...'
+              : buttonLabel}
           </button>
         )}
 
         {isWin && step === 'success' && (
-          <button type="button" onClick={onClose} className="modal-continue">
+          <button
+            type="button"
+            onClick={onClose}
+            className="modal-close"
+          >
             CLOSE
           </button>
         )}
+      </div>
     </BaseModal>
   )
 }

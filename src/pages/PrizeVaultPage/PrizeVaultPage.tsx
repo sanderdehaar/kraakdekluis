@@ -785,28 +785,31 @@ function PrizeVaultPage() {
 
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="relative h-64 w-64 rounded-[32px] border-4 border-white">
-              <span className="absolute -left-1 -top-1 h-12 w-12 rounded-tl-[28px] border-l-4 border-t-4 border-[#ff6a00]" />
+              <span className="absolute -left-1 -top-1 h-12 w-12 rounded-tl-[28px] border-l-4 border-t-4 border-white" />
 
-              <span className="absolute -right-1 -top-1 h-12 w-12 rounded-tr-[28px] border-r-4 border-t-4 border-[#ff6a00]" />
+              <span className="absolute -right-1 -top-1 h-12 w-12 rounded-tr-[28px] border-r-4 border-t-4 border-white" />
 
-              <span className="absolute -bottom-1 -left-1 h-12 w-12 rounded-bl-[28px] border-b-4 border-l-4 border-[#ff6a00]" />
+              <span className="absolute -bottom-1 -left-1 h-12 w-12 rounded-bl-[28px] border-b-4 border-l-4 border-white" />
 
-              <span className="absolute -bottom-1 -right-1 h-12 w-12 rounded-br-[28px] border-b-4 border-r-4 border-[#ff6a00]" />
+              <span className="absolute -bottom-1 -right-1 h-12 w-12 rounded-br-[28px] border-b-4 border-r-4 border-white" />
 
-              <div className="absolute left-0 right-0 top-1/2 h-0.5 animate-pulse bg-[#ff6a00]" />
+              <div className="absolute left-0 right-0 top-1/2 h-0.5 animate-pulse bg-white" />
             </div>
           </div>
 
-          <div className="absolute left-0 right-0 top-8 px-6 text-center text-white">
-            <p className="text-sm font-black tracking-[3px]">
-              FANTA × STUKTV
-            </p>
-
-            <h2 className="mt-3 text-2xl font-black">
+          <div
+            className="absolute left-0 right-0 top-10 px-6 text-center text-white"
+            style={{
+              fontFamily:
+                'Fanta, sans-serif',
+              fontWeight: 400,
+            }}
+          >
+            <h2 className="text-3xl uppercase">
               SCAN THE QR CODE
             </h2>
 
-            <p className="mt-2 text-sm">
+            <p className="mt-3 text-base uppercase">
               Point your camera at the QR
             </p>
           </div>
@@ -814,7 +817,12 @@ function PrizeVaultPage() {
           <button
             type="button"
             onClick={stopScanner}
-            className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-7 py-4 font-black text-black"
+            className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-7 py-4 text-black"
+            style={{
+              fontFamily:
+                'Fanta, sans-serif',
+              fontWeight: 400,
+            }}
           >
             <X size={20} />
 
