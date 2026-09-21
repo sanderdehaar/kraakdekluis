@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-import './CrackModal.css'
+import BaseModal from '../BaseModal/BaseModal'
 
 type ResultType = 'win' | 'fail' | 'clue'
 
@@ -85,17 +85,7 @@ function PrizeModal({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="modal-close"
-        >
-          ×
-        </button>
-
+    <BaseModal onClose={onClose}>
         <div className="modal-icon">
           {isWin && '🔓'}
           {result.status === 'fail' && '🔒'}
@@ -199,8 +189,7 @@ function PrizeModal({
             CLOSE
           </button>
         )}
-      </div>
-    </div>
+    </BaseModal>
   )
 }
 

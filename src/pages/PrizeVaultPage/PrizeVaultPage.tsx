@@ -14,11 +14,10 @@ import PrizeModal from '../../components/feedback/PrizeModal/PrizeModal'
 import BrandHeader from '../../components/layout/BrandHeader/BrandHeader'
 import VaultDisplay from '../../components/media/VaultDisplay/VaultDisplay'
 
-import prizes from '../../data/prizes.json'
-
 type ResultType = 'win' | 'fail' | 'clue'
 
 type QRCodeData = {
+  kind?: 'vault' | 'can'
   type: ResultType
   prizeId: string | null
   claimed: boolean
@@ -28,6 +27,7 @@ type QRCodeData = {
 type PrizeData = {
   name: string
   description: string
+  claimMessage?: string
 }
 
 type TVAnimation =
@@ -40,20 +40,54 @@ type TVAnimation =
 function PrizeVaultPage() {
   const [code, setCode] = useState<string | null>(null)
   const [qrData, setQrData] = useState<QRCodeData | null>(null)
+  const [prize, setPrize] = useState<PrizeData | null>(null)
+  const [qrCollection, setQrCollection] = useState<'qrCodes' | 'canQrCodes'>('canQrCodes')
   const [loading, setLoading] = useState(false)
   const [claimed, setClaimed] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [error, setError] = useState(false)
+  const [, setError] = useState(false)
   const [tvAnimation, setTvAnimation] =
     useState<TVAnimation>('idle')
 
   const qrInputRef = useRef<HTMLInputElement>(null)
 
+  async function loadPrize(prizeId: string | null) {
+    if (!prizeId) {
+      setPrize(null)
+      return null
+    }
+
+    const prizeSnapshot = await getDoc(doc(db, 'prizes', prizeId))
+    const prizeData = prizeSnapshot.exists()
+      ? prizeSnapshot.data() as PrizeData
+      : null
+
+    setPrize(prizeData)
+    return prizeData
+  }
+
+  async function findQRCode(codeValue: string) {
+    const collections = ['qrCodes', 'canQrCodes'] as const
+
+    for (const collectionName of collections) {
+      const snapshot = await getDoc(doc(db, collectionName, codeValue))
+
+      if (snapshot.exists()) {
+        return {
+          collectionName,
+          data: snapshot.data() as QRCodeData,
+        }
+      }
+    }
+
+    return null
+  }
+
   useEffect(() => {
     async function loadQRCode() {
       const params = new URLSearchParams(window.location.search)
       const urlCode =
-        params.get('code')?.toUpperCase() || null
+        params.get('code')?.trim() || null
 
       setCode(urlCode)
       setLoading(false)
@@ -74,7 +108,7 @@ function PrizeVaultPage() {
       const queryCode = url.searchParams.get('code')
 
       if (queryCode) {
-        return queryCode.toUpperCase()
+        return queryCode.trim()
       }
 
       const parts = url.pathname
@@ -82,13 +116,13 @@ function PrizeVaultPage() {
         .filter(Boolean)
 
       if (parts.length > 0) {
-        return parts[parts.length - 1].toUpperCase()
+        return parts[parts.length - 1].trim()
       }
     } catch {
       // Raw QR code
     }
 
-    return value.trim().toUpperCase()
+    return value.trim()
   }
 
   async function processQRCode(scannedValue: string) {
@@ -105,15 +139,9 @@ function PrizeVaultPage() {
       setError(false)
       setTvAnimation('scanning')
 
-      const qrRef = doc(
-        db,
-        'qrCodes',
-        extractedCode,
-      )
+      const result = await findQRCode(extractedCode)
 
-      const snapshot = await getDoc(qrRef)
-
-      if (!snapshot.exists()) {
+      if (!result) {
         setError(true)
         setTvAnimation('fail')
 
@@ -124,11 +152,13 @@ function PrizeVaultPage() {
         return
       }
 
-      const data = snapshot.data() as QRCodeData
+      const data = result.data
 
       setCode(extractedCode)
       setQrData(data)
       setClaimed(data.claimed)
+      setQrCollection(result.collectionName)
+      await loadPrize(data.prizeId)
 
       setTimeout(() => {
         setTvAnimation(data.type)
@@ -254,11 +284,16 @@ function PrizeVaultPage() {
   async function handlePasswordSubmit(
     password: string,
   ) {
+    if (!qrData && password.trim()) {
+      await processQRCode(password.trim())
+      return
+    }
+
     if (!code || !qrData || claimed) {
       return
     }
 
-    if (password.toUpperCase() !== code) {
+    if (password.trim() !== code) {
       setTvAnimation('fail')
 
       setTimeout(() => {
@@ -269,8 +304,7 @@ function PrizeVaultPage() {
     }
 
     try {
-      const qrRef = doc(db, 'qrCodes', code)
-      const latestSnapshot = await getDoc(qrRef)
+      const latestSnapshot = await getDoc(doc(db, qrCollection, code))
 
       if (!latestSnapshot.exists()) {
         setError(true)
@@ -283,6 +317,7 @@ function PrizeVaultPage() {
       if (latestData.claimed) {
         setClaimed(true)
         setQrData(latestData)
+        await loadPrize(latestData.prizeId)
         setTvAnimation(latestData.type)
 
         setTimeout(() => {
@@ -293,6 +328,7 @@ function PrizeVaultPage() {
 
       setClaimed(false)
       setQrData(latestData)
+      await loadPrize(latestData.prizeId)
       setTvAnimation(latestData.type)
 
       setTimeout(() => {
@@ -345,7 +381,7 @@ function PrizeVaultPage() {
       throw new Error('No QR code is active for this prize claim.')
     }
 
-    await updateDoc(doc(db, 'qrCodes', code), {
+    await updateDoc(doc(db, qrCollection, code), {
       claimed: true,
     })
 
@@ -381,13 +417,6 @@ function PrizeVaultPage() {
       </main>
     )
   }
-
-  const prize: PrizeData | null =
-    qrData?.prizeId
-      ? (prizes as Record<string, PrizeData>)[
-          qrData.prizeId
-        ] || null
-      : null
 
   return (
     <main className="page">
@@ -438,9 +467,10 @@ function PrizeVaultPage() {
             className="mt-5 flex items-center justify-center whitespace-nowrap"
             style={{
               fontFamily: 'Fanta, sans-serif',
-              fontSize: 'clamp(9px, 1.25vw, 15px)',
+              fontSize: 'clamp(12px, 1.25vw, 15px)',
               lineHeight: 1,
               fontWeight: 400,
+              maxWidth: '90vw',
               textTransform: 'uppercase',
             }}
           >
@@ -475,11 +505,6 @@ function PrizeVaultPage() {
         />
       )}
 
-      {error && (
-        <div className="fixed left-1/2 top-5 z-[200] -translate-x-1/2 bg-black px-5 py-3 font-mono text-xs font-bold text-red-400">
-          INVALID QR CODE
-        </div>
-      )}
     </main>
   )
 }

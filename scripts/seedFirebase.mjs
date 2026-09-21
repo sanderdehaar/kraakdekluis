@@ -7,6 +7,8 @@ import {
   getFirestore,
   collection,
   doc,
+  deleteDoc,
+  getDoc,
   setDoc,
 } from 'firebase/firestore'
 
@@ -30,9 +32,48 @@ const jsonPath = path.join(
   '../src/data/qrCodes.json',
 )
 
+const prizesPath = path.join(
+  __dirname,
+  '../src/data/prizes.json',
+)
+
+const canQrCodesPath = path.join(
+  __dirname,
+  '../src/data/canQrCodes.json',
+)
+
 const qrCodes = JSON.parse(
   fs.readFileSync(jsonPath, 'utf8'),
 )
+
+const prizes = JSON.parse(
+  fs.readFileSync(prizesPath, 'utf8'),
+)
+
+const canQrCodes = JSON.parse(
+  fs.readFileSync(canQrCodesPath, 'utf8'),
+)
+
+const legacyVaultCodes = [
+  'FANTA001',
+  'FANTA002',
+  'FANTA003',
+  'FANTA004',
+  'FANTA005',
+  '48391726',
+  '76028415',
+  '19563847',
+  '82410693',
+  '53179264',
+]
+
+const legacyCanCodes = [
+  '9174062831',
+  '6041839275',
+  '7825406193',
+  '3468192057',
+  '8512746309',
+]
 
 async function seedDatabase() {
   console.log('')
@@ -40,15 +81,62 @@ async function seedDatabase() {
   console.log('')
 
   const qrCollection = collection(db, 'qrCodes')
+  const overwriteClaimed = process.argv.includes('--reset-claims')
+
+  for (const code of legacyVaultCodes) {
+    await deleteDoc(doc(qrCollection, code))
+  }
 
   for (const [code, data] of Object.entries(qrCodes)) {
-    await setDoc(doc(qrCollection, code), data)
+    const qrRef = doc(qrCollection, code)
+    const existingSnapshot = await getDoc(qrRef)
+    const existingClaimed = existingSnapshot.exists()
+      ? existingSnapshot.data().claimed
+      : undefined
+
+    await setDoc(qrRef, {
+      ...data,
+      ...(!overwriteClaimed && typeof existingClaimed === 'boolean'
+        ? { claimed: existingClaimed }
+        : {}),
+    }, { merge: true })
 
     console.log(`Created: ${code}`)
   }
 
+  const canQrCollection = collection(db, 'canQrCodes')
+
+  for (const code of legacyCanCodes) {
+    await deleteDoc(doc(canQrCollection, code))
+  }
+
+  for (const [code, data] of Object.entries(canQrCodes)) {
+    const qrRef = doc(canQrCollection, code)
+    const existingSnapshot = await getDoc(qrRef)
+    const existingClaimed = existingSnapshot.exists()
+      ? existingSnapshot.data().claimed
+      : undefined
+
+    await setDoc(qrRef, {
+      ...data,
+      ...(typeof existingClaimed === 'boolean'
+        ? { claimed: existingClaimed }
+        : {}),
+    }, { merge: true })
+
+    console.log(`Created can QR: ${code}`)
+  }
+
+  const prizesCollection = collection(db, 'prizes')
+
+  for (const [prizeId, data] of Object.entries(prizes)) {
+    await setDoc(doc(prizesCollection, prizeId), data, { merge: true })
+
+    console.log(`Created prize: ${prizeId}`)
+  }
+
   console.log('')
-  console.log('All QR codes added to Firebase!')
+  console.log('All vault QR codes, can QR codes, and prizes added to Firebase!')
   console.log('')
 }
 

@@ -1,14 +1,27 @@
 {
   "PRIZE001": {
     "name": "Fanta x STUKTV Prize",
-    "description": "You won a Fanta x STUKTV surprise!"
+    "description": "You won a Fanta x STUKTV surprise!",
+    "claimMessage": "Your prize is secured. We will contact you with the next step."
   },
   "PRIZE002": {
     "name": "Fanta Surprise",
-    "description": "A refreshing Fanta surprise is waiting for you!"
+    "description": "A refreshing Fanta surprise is waiting for you!",
+    "claimMessage": "Your Fanta surprise is ready to be claimed."
   },
   "PRIZE003": {
     "name": "STUKTV Merchandise",
-    "description": "You won exclusive STUKTV merchandise!"
+    "description": "You won exclusive STUKTV merchandise!",
+    "claimMessage": "Exclusive STUKTV merchandise is coming your way."
+  },
+  "PRIZE004": {
+    "name": "Fanta Streetwear Pack",
+    "description": "A limited Fanta x STUKTV streetwear pack with exclusive pieces.",
+    "claimMessage": "Your limited streetwear pack is secured. We will contact you with the next step."
+  },
+  "PRIZE005": {
+    "name": "The Golden Vault Drop",
+    "description": "The rarest drop in the game: a premium Fanta x STUKTV prize bundle.",
+    "claimMessage": "You found the Golden Vault Drop. We will contact you with the next step."
   }
 }

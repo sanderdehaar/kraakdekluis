@@ -1,0 +1,33 @@
+{
+  "C8vL2qM7xA4nR9pK": {
+    "kind": "can",
+    "type": "win",
+    "prizeId": "PRIZE001",
+    "claimed": false
+  },
+  "N3fT8wJ1cP6yH4mQ": {
+    "kind": "can",
+    "type": "clue",
+    "prizeId": null,
+    "claimed": false,
+    "clue": "The next can is colder than this one."
+  },
+  "R7aK2zD9vL5sX1nB": {
+    "kind": "can",
+    "type": "win",
+    "prizeId": "PRIZE002",
+    "claimed": false
+  },
+  "M4qW8eC3rT7pY2hN": {
+    "kind": "can",
+    "type": "fail",
+    "prizeId": null,
+    "claimed": false
+  },
+  "X1nG6bV9kQ3dF8sJ": {
+    "kind": "can",
+    "type": "win",
+    "prizeId": "PRIZE003",
+    "claimed": false
+  }
+}
