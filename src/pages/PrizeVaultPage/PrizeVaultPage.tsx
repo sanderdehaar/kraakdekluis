@@ -57,7 +57,7 @@ function PrizeVaultPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const scanFrameRef = useRef<number | null>(null)
+  const scanTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null)
   const processingRef = useRef(false)
 
   useEffect(() => {
@@ -77,7 +77,14 @@ function PrizeVaultPage() {
         'change',
         updateDevice,
       )
-      stopScanner()
+
+      if (scanTimerRef.current !== null) {
+        window.clearTimeout(scanTimerRef.current)
+        scanTimerRef.current = null
+      }
+
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
     }
   }, [])
 
@@ -331,80 +338,119 @@ function PrizeVaultPage() {
     event.target.value = ''
   }
 
+  type NativeBarcodeDetector = {
+    detect: (
+      source: HTMLVideoElement,
+    ) => Promise<Array<{ rawValue?: string }>>
+  }
+
+  type NativeBarcodeDetectorConstructor = new (options?: {
+    formats?: string[]
+  }) => NativeBarcodeDetector
+
+  function getBarcodeDetector() {
+    const Detector = (
+      window as typeof window & {
+        BarcodeDetector?: NativeBarcodeDetectorConstructor
+      }
+    ).BarcodeDetector
+
+    if (!Detector) return null
+
+    try {
+      return new Detector({ formats: ['qr_code'] })
+    } catch {
+      return null
+    }
+  }
+
   async function startScanner() {
-    if (
-      scanning ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
+    if (scanning) return
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError(true)
       return
     }
 
     try {
       setCameraError(false)
+      setError(false)
+      setTvAnimation('scanning')
       processingRef.current = false
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: {
-              ideal: 'environment',
-            },
-            width: {
-              ideal: 1280,
-            },
-            height: {
-              ideal: 720,
-            },
-          },
-          audio: false,
-        })
-
-      streamRef.current = stream
+      // Mount the video element before trying to attach the camera stream.
       setScanning(true)
 
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => resolve())
       })
 
+      let stream: MediaStream
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { exact: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        })
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        })
+      }
+
+      streamRef.current = stream
+
       const video = videoRef.current
 
       if (!video) {
-        stopScanner()
+        stream.getTracks().forEach((track) => track.stop())
+        streamRef.current = null
+        setScanning(false)
+        setCameraError(true)
         return
       }
 
       video.srcObject = stream
+      video.setAttribute('playsinline', 'true')
+      video.muted = true
+
+      await new Promise<void>((resolve) => {
+        if (video.readyState >= 2) {
+          resolve()
+          return
+        }
+
+        video.onloadedmetadata = () => resolve()
+      })
 
       await video.play()
 
       scanFrame()
     } catch (error) {
-      console.error(
-        'Unable to access camera:',
-        error,
-      )
-
+      console.error('Unable to access camera:', error)
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
       setCameraError(true)
       setScanning(false)
     }
   }
 
   function stopScanner() {
-    if (scanFrameRef.current !== null) {
-      cancelAnimationFrame(
-        scanFrameRef.current,
-      )
-
-      scanFrameRef.current = null
+    if (scanTimerRef.current !== null) {
+      window.clearTimeout(scanTimerRef.current)
+      scanTimerRef.current = null
     }
 
-    streamRef.current
-      ?.getTracks()
-      .forEach((track) => track.stop())
-
+    streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
 
     if (videoRef.current) {
+      videoRef.current.pause()
       videoRef.current.srcObject = null
     }
 
@@ -412,81 +458,89 @@ function PrizeVaultPage() {
     setScanning(false)
   }
 
-  function scanFrame() {
+  async function scanFrame() {
     if (processingRef.current) return
 
     const video = videoRef.current
-    const canvas = canvasRef.current
 
-    if (!video || !canvas) {
-      scanFrameRef.current =
-        requestAnimationFrame(scanFrame)
-
+    if (!video || video.readyState < 2 || !video.videoWidth) {
+      scanTimerRef.current = window.setTimeout(scanFrame, 100)
       return
     }
 
-    if (video.readyState < 2) {
-      scanFrameRef.current =
-        requestAnimationFrame(scanFrame)
+    try {
+      const detector = getBarcodeDetector()
 
-      return
+      if (detector) {
+        const detected = await detector.detect(video)
+        const value = detected.find((item) => item.rawValue)?.rawValue
+
+        if (value) {
+          processingRef.current = true
+          stopScanner()
+          await processQRCode(value)
+          return
+        }
+      }
+
+      const canvas = canvasRef.current
+
+      if (!canvas) {
+        scanTimerRef.current = window.setTimeout(scanFrame, 120)
+        return
+      }
+
+      const maxSize = 720
+      const scale = Math.min(
+        1,
+        maxSize / Math.max(video.videoWidth, video.videoHeight),
+      )
+      const width = Math.max(1, Math.round(video.videoWidth * scale))
+      const height = Math.max(1, Math.round(video.videoHeight * scale))
+
+      canvas.width = width
+      canvas.height = height
+
+      const context = canvas.getContext('2d', {
+        willReadFrequently: true,
+      })
+
+      if (!context) {
+        scanTimerRef.current = window.setTimeout(scanFrame, 120)
+        return
+      }
+
+      context.drawImage(video, 0, 0, width, height)
+
+      const imageData = context.getImageData(
+        0,
+        0,
+        width,
+        height,
+      )
+
+      const result = jsQR(
+        imageData.data,
+        imageData.width,
+        imageData.height,
+        {
+          inversionAttempts: 'attemptBoth',
+        },
+      )
+
+      if (result?.data) {
+        processingRef.current = true
+        stopScanner()
+        await processQRCode(result.data)
+        return
+      }
+    } catch (error) {
+      console.debug('QR scan attempt failed:', error)
     }
 
-    const width = video.videoWidth
-    const height = video.videoHeight
-
-    if (!width || !height) {
-      scanFrameRef.current =
-        requestAnimationFrame(scanFrame)
-
-      return
+    if (!processingRef.current && streamRef.current) {
+      scanTimerRef.current = window.setTimeout(scanFrame, 120)
     }
-
-    canvas.width = width
-    canvas.height = height
-
-    const context = canvas.getContext('2d', {
-      willReadFrequently: true,
-    })
-
-    if (!context) {
-      stopScanner()
-      return
-    }
-
-    context.drawImage(
-      video,
-      0,
-      0,
-      width,
-      height,
-    )
-
-    const imageData = context.getImageData(
-      0,
-      0,
-      width,
-      height,
-    )
-
-    const result = jsQR(
-      imageData.data,
-      imageData.width,
-      imageData.height,
-      {
-        inversionAttempts: 'attemptBoth',
-      },
-    )
-
-    if (result?.data) {
-      processingRef.current = true
-      stopScanner()
-      processQRCode(result.data)
-      return
-    }
-
-    scanFrameRef.current =
-      requestAnimationFrame(scanFrame)
   }
 
   async function handlePasswordSubmit(
