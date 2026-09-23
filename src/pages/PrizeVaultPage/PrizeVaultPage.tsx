@@ -843,6 +843,9 @@ function PrizeVaultPage() {
           onSubmitContact={
             handleClaimContact
           }
+          onViewVaultLocations={() => {
+            window.location.href = '/vault-locations'
+          }}
         />
       )}
     </main>

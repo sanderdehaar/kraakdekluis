@@ -13,7 +13,10 @@ type PrizeModalProps = {
   }
   isClaimed: boolean
   onClose: () => void
-  onSubmitContact?: (name: string, email: string) => void
+  onSubmitContact?: (payload: {
+    name: string
+    email: string
+  }) => Promise<boolean>
   onViewVaultLocations: () => void
 }
 
@@ -36,11 +39,28 @@ function PrizeModal({
     }
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault()
 
-    onSubmitContact?.(name, email)
-    setStep('success')
+    if (!onSubmitContact) {
+      setStep('success')
+      return
+    }
+
+    try {
+      const success = await onSubmitContact({
+        name,
+        email,
+      })
+
+      if (success) {
+        setStep('success')
+      }
+    } catch (error) {
+      console.error('Failed to submit prize claim:', error)
+    }
   }
 
   const buttonWrapper =
