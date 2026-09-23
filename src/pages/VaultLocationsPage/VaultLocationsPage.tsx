@@ -335,6 +335,14 @@ function VaultLocationsPage() {
         />
       )}
 
+    <div className="absolute bottom-[10vh] left-[140px] z-10 max-[600px]:bottom-[9vh] max-[600px]:left-5">
+      <img
+        src="/images/go_back.svg"
+        alt="Go back"
+        className="h-30 w-30 max-[600px]:h-22 max-[600px]:w-22"
+      />
+    </div>
+
       <div className="absolute bottom-[30px] left-[30px] z-10 max-[600px]:bottom-5 max-[600px]:left-5">
         <ActionButton
           onClick={() => navigate('/crack')}

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
+import ActionButton from '../../buttons/ActionButton/ActionButton'
 import BaseModal from '../BaseModal/BaseModal'
 
 type ResultType = 'win' | 'fail' | 'clue'
@@ -10,226 +11,233 @@ type CrackModalProps = {
     prize?: string
     clue?: string
   }
-  isClaimed?: boolean
+  isClaimed: boolean
   onClose: () => void
-  onSubmitContact?: (payload: {
-    name: string
-    email: string
-  }) => Promise<boolean>
+  onSubmitContact?: (name: string, email: string) => void
+  onViewVaultLocations: () => void
 }
 
 function CrackModal({
   result,
-  isClaimed = false,
+  isClaimed,
   onClose,
   onSubmitContact,
+  onViewVaultLocations,
 }: CrackModalProps) {
-  const isWin = result.status === 'win'
-  const isClue = result.status === 'clue'
+  const [step, setStep] = useState<'result' | 'contact' | 'success'>(
+    'result',
+  )
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
 
-  const [step, setStep] = useState<
-    'result' | 'contact' | 'success'
-  >('result')
-
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-  })
-
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-
-  const canContinueToContact = isWin && !isClaimed
-
-  const buttonLabel = useMemo(() => {
-    if (isClaimed) return 'PRIZE ALREADY CLAIMED'
-    if (step === 'contact') return 'SEND DETAILS'
-    return 'CONTINUE'
-  }, [isClaimed, step])
-
-  async function handleContinue() {
-    if (!canContinueToContact) {
-      onClose()
-      return
-    }
-
-    if (step === 'result') {
+  const handleContinue = () => {
+    if (result.status === 'win' && !isClaimed) {
       setStep('contact')
-      return
-    }
-
-    if (!form.name.trim() || !form.email.trim()) {
-      setSubmitError('Please add your name and email.')
-      return
-    }
-
-    setIsSubmitting(true)
-    setSubmitError('')
-
-    try {
-      const success = await onSubmitContact?.({
-        name: form.name.trim(),
-        email: form.email.trim(),
-      })
-
-      if (success === false) {
-        setSubmitError(
-          'We could not send the message right now. Please try again.',
-        )
-        return
-      }
-
-      setStep('success')
-    } catch (error) {
-      console.error('Failed to submit prize claim form:', error)
-
-      setSubmitError(
-        'We could not send the message right now. Please try again.',
-      )
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
-  return (
-    <BaseModal onClose={onClose}>
-      <div className="modal-icon">
-        {isWin && '🔓'}
-        {result.status === 'fail' && '🔒'}
-        {isClue && '🔎'}
-      </div>
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
-      {isWin && step === 'result' && (
+    onSubmitContact?.(name, email)
+    setStep('success')
+  }
+
+  const buttonWrapper =
+    'modal-actions mt-8 flex w-full flex-col items-center justify-center gap-3'
+
+  const buttonClass = '!bg-black !text-white'
+
+  const renderResult = () => {
+    if (result.status === 'win') {
+      return (
         <>
-          <p className="modal-eyebrow">YOU WON</p>
-          <h2 className="modal-title">PRIZE FOUND</h2>
+          <div className="modal-icon">🏆</div>
 
-          <div className="modal-prize">
-            <span className="modal-prize__label">YOUR PRIZE</span>
-            <strong className="modal-prize__name">
-              {result.prize}
-            </strong>
-          </div>
+          <p className="modal-eyebrow">CONGRATULATIONS</p>
 
-          {isClaimed && (
-            <p className="modal-body modal-body--standalone">
-              This prize has already been claimed.
-            </p>
-          )}
-        </>
-      )}
-
-      {isWin && step === 'contact' && (
-        <>
-          <p className="modal-eyebrow">CONTACT DETAILS</p>
-          <h2 className="modal-title">WE'LL REACH OUT</h2>
-
-          <div className="claim-form">
-            <label className="claim-form__field">
-              <span>Name</span>
-
-              <input
-                type="text"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                placeholder="Your name"
-              />
-            </label>
-
-            <label className="claim-form__field">
-              <span>Email</span>
-
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    email: event.target.value,
-                  }))
-                }
-                placeholder="Your email"
-              />
-            </label>
-          </div>
-
-          {submitError && (
-            <p className="form-error">{submitError}</p>
-          )}
-        </>
-      )}
-
-      {isWin && step === 'success' && (
-        <>
-          <p className="modal-eyebrow">THANK YOU</p>
-          <h2 className="modal-title">WE'LL CONTACT YOU</h2>
-
-          <p className="modal-body modal-body--standalone">
-            Your prize claim has been received. We will contact
-            you shortly with the next steps.
-          </p>
-        </>
-      )}
-
-      {result.status === 'fail' && (
-        <>
-          <p className="modal-eyebrow">
-            THE SAFE STAYS LOCKED
-          </p>
-
-          <h2 className="modal-title">
-            NOT THIS
-            <br />
-            TIME
+          <h2 id="crack-modal-title" className="modal-title">
+            YOU UNLOCKED THE PRIZE
           </h2>
+
+          {result.prize && (
+            <div className="modal-prize border-2 border-[#ff5a00] !bg-transparent !text-black">
+              <strong className="modal-prize__name !text-black">
+                {result.prize}
+              </strong>
+            </div>
+          )}
 
           <p className="modal-body">
-            Unfortunately, this code didn't unlock the prize.
+            {isClaimed
+              ? 'This prize has already been claimed.'
+              : 'You cracked the vault! Enter your details to claim your prize.'}
           </p>
+
+          {!isClaimed && (
+            <div className={buttonWrapper}>
+              <ActionButton
+                onClick={handleContinue}
+                className={buttonClass}
+              >
+                CLAIM PRIZE
+              </ActionButton>
+            </div>
+          )}
         </>
-      )}
+      )
+    }
 
-      {isClue && (
+    if (result.status === 'clue') {
+      return (
         <>
-          <p className="modal-eyebrow">YOU FOUND A CLUE</p>
+          <div className="modal-icon">🔎</div>
 
-          <h2 className="modal-title">
-            KEEP
-            <br />
-            LOOKING
+          <p className="modal-eyebrow">CLUE FOUND</p>
+
+          <h2 id="crack-modal-title" className="modal-title">
+            HERE'S YOUR CLUE
           </h2>
 
-          <div className="modal-clue">{result.clue}</div>
+          {result.clue && (
+            <p className="modal-clue">
+              {result.clue}
+            </p>
+          )}
+
+          <div className={buttonWrapper}>
+            <ActionButton
+              onClick={onViewVaultLocations}
+              className={buttonClass}
+            >
+              VIEW VAULT LOCATIONS
+            </ActionButton>
+          </div>
         </>
-      )}
+      )
+    }
 
-      <div className="modal-actions">
-        {!isWin && !isClue && !isClaimed && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="modal-close"
-          >
-            CLOSE
-          </button>
-        )}
+    return (
+      <>
+        <div className="modal-icon">🔒</div>
 
-        {isWin && step !== 'success' && (
-          <button
-            type="button"
-            onClick={handleContinue}
-            className="modal-continue"
-            disabled={isSubmitting}
+        <p className="modal-eyebrow">TRY AGAIN</p>
+
+        <h2 id="crack-modal-title" className="modal-title">
+          VAULT LOCKED
+        </h2>
+
+        <p className="modal-body">
+          Unfortunately, this code didn't unlock the prize.
+        </p>
+
+        <div className={buttonWrapper}>
+          <ActionButton
+            onClick={onViewVaultLocations}
+            className={buttonClass}
           >
-            {isSubmitting ? 'SENDING...' : buttonLabel}
-          </button>
-        )}
-      </div>
+            VIEW VAULT LOCATIONS
+          </ActionButton>
+        </div>
+      </>
+    )
+  }
+
+  if (step === 'contact') {
+    return (
+      <BaseModal
+        onClose={onClose}
+        ariaLabelledBy="crack-modal-title"
+      >
+        <p className="modal-eyebrow">CLAIM YOUR PRIZE</p>
+
+        <h2 id="crack-modal-title" className="modal-title">
+          YOUR DETAILS
+        </h2>
+
+        <p className="modal-body">
+          Enter your details below so we can contact you about your prize.
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="claim-form mt-6 flex flex-col gap-4"
+        >
+          <label className="flex flex-col gap-2 text-left">
+            <span className="font-bold uppercase tracking-[0.08em]">
+              Name
+            </span>
+
+            <input
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              className="w-full rounded border-2 border-black px-4 py-3 outline-none"
+              placeholder="Your name"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-left">
+            <span className="font-bold uppercase tracking-[0.08em]">
+              Email
+            </span>
+
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              className="w-full rounded border-2 border-black px-4 py-3 outline-none"
+              placeholder="Your email"
+            />
+          </label>
+
+          <div className="modal-actions mt-4 flex w-full flex-col items-center justify-center gap-3">
+            <ActionButton
+              type="submit"
+              className={buttonClass}
+            >
+              SEND DETAILS
+            </ActionButton>
+          </div>
+        </form>
+      </BaseModal>
+    )
+  }
+
+  if (step === 'success') {
+    return (
+      <BaseModal
+        onClose={onClose}
+        ariaLabelledBy="crack-modal-title"
+      >
+        <div className="modal-icon">🎉</div>
+
+        <p className="modal-eyebrow">ALL DONE</p>
+
+        <h2 id="crack-modal-title" className="modal-title">
+          PRIZE CLAIMED
+        </h2>
+
+        <p className="modal-body">
+          Your details have been received. We will contact you within 2–6 days
+          about your prize.
+        </p>
+
+        <p className="modal-body mt-4">
+          A confirmation email has also been sent to you.
+        </p>
+      </BaseModal>
+    )
+  }
+
+  return (
+    <BaseModal
+      onClose={onClose}
+      ariaLabelledBy="crack-modal-title"
+    >
+      {renderResult()}
     </BaseModal>
   )
 }
